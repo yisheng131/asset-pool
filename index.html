@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>持股 Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif; background: #0f1117; color: #e0e0e0; min-height: 100vh; }
+
+  header { background: linear-gradient(135deg, #1a1f2e 0%, #16213e 100%); padding: 20px 32px; border-bottom: 1px solid #2a3a5c; }
+  header h1 { font-size: 22px; font-weight: 700; color: #fff; }
+  header span { font-size: 13px; color: #6b7db3; }
+
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px 32px; }
+
+  /* ── Cards ── */
+  .cards-row1 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 14px; }
+  .cards-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+
+  .card { background: #1a1f2e; border: 1px solid #2a3a5c; border-radius: 12px; padding: 18px 20px; }
+  .card label { font-size: 11px; color: #6b7db3; text-transform: uppercase; letter-spacing: 0.8px; display: block; }
+  .card .val { font-size: 24px; font-weight: 700; margin-top: 6px; }
+  .card .sub { font-size: 12px; color: #6b7db3; margin-top: 4px; }
+
+  /* cash card */
+  .card.cash { border-color: #2a5c4a; background: #111e1a; }
+  .card.cash label { color: #3db886; }
+  .cash-wrap { display: flex; align-items: baseline; gap: 5px; margin-top: 6px; }
+  .cash-wrap .currency { font-size: 15px; color: #3db886; font-weight: 700; }
+  .cash-wrap input {
+    background: transparent; border: none; border-bottom: 1.5px solid #2a5c4a;
+    color: #26d87c; font-size: 22px; font-weight: 700; width: 100%;
+    padding: 1px 0; font-family: inherit;
+  }
+  .cash-wrap input:focus { outline: none; border-bottom-color: #3db886; }
+  .cash-wrap input::-webkit-inner-spin-button,
+  .cash-wrap input::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+  /* total assets card */
+  .card.total { border-color: #2a3f7c; background: #111828; }
+  .card.total label { color: #7ec8f7; }
+  .card.total .val { color: #7ec8f7; }
+
+  .positive { color: #26d87c; }
+  .negative { color: #ff5a5a; }
+  .neutral  { color: #e0e0e0; }
+
+  /* ── Table ── */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .section-title { font-size: 14px; font-weight: 600; color: #a0b0d0; text-transform: uppercase; letter-spacing: 0.6px; }
+
+  .btn-add {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #1e3a5f; border: 1px solid #2a6496; color: #7ec8f7;
+    padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .btn-add:hover { background: #254d7a; }
+
+  .table-wrap { overflow-x: auto; margin-bottom: 32px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: #1e2636; }
+  th { padding: 10px 12px; text-align: right; color: #7080a0; font-weight: 600; white-space: nowrap; border-bottom: 1px solid #2a3a5c; }
+  th:first-child { text-align: left; }
+  th:last-child  { text-align: center; }
+  tbody tr { border-bottom: 1px solid #1e2636; transition: background 0.15s; }
+  tbody tr:hover { background: #1a2233; }
+  td { padding: 8px 12px; text-align: right; vertical-align: middle; }
+  td.center { text-align: center; }
+
+  input[type=text], input[type=number] {
+    background: #0f1117; border: 1px solid #2a3a5c; border-radius: 6px;
+    color: #e0e0e0; padding: 5px 8px; font-size: 13px; transition: border-color 0.2s;
+    font-family: inherit;
+  }
+  input[type=text]   { width: 110px; text-align: left; color: #a0c4ff; font-weight: 600; }
+  input[type=number] { width: 90px; text-align: right; }
+  input[type=text]:focus, input[type=number]:focus { outline: none; border-color: #4a90d9; }
+
+  .ro { color: #c0d0e8; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .pill.pos { background: #0d3b26; color: #26d87c; }
+  .pill.neg { background: #3b1212; color: #ff5a5a; }
+
+  .btn-del {
+    background: none; border: 1px solid #4a2020; color: #e05555;
+    border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer;
+  }
+  .btn-del:hover { background: #3b1212; }
+
+  /* ── Charts ── */
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+  .chart-box { background: #1a1f2e; border: 1px solid #2a3a5c; border-radius: 12px; padding: 20px; }
+  .chart-box canvas { max-height: 320px; }
+
+  /* ── Modal ── */
+  .modal-bg {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+    align-items: center; justify-content: center; z-index: 100;
+  }
+  .modal-bg.open { display: flex; }
+  .modal { background: #1a1f2e; border: 1px solid #2a3a5c; border-radius: 14px; padding: 28px 32px; width: 360px; max-width: 95vw; }
+  .modal h2 { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 20px; }
+  .modal .field { margin-bottom: 14px; }
+  .modal .field label { display: block; font-size: 12px; color: #7080a0; margin-bottom: 5px; }
+  .modal .field input { width: 100%; background: #0f1117; border: 1px solid #2a3a5c; border-radius: 8px; color: #e0e0e0; padding: 8px 10px; font-size: 14px; font-family: inherit; }
+  .modal .field input:focus { outline: none; border-color: #4a90d9; }
+  .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-confirm { flex:1; background:#1e3a5f; border:1px solid #2a6496; color:#7ec8f7; padding:9px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; }
+  .btn-confirm:hover { background:#254d7a; }
+  .btn-cancel  { flex:1; background:#1e2636; border:1px solid #2a3a5c; color:#7080a0; padding:9px; border-radius:8px; font-size:14px; cursor:pointer; }
+  .btn-cancel:hover { background:#252f42; }
+
+  @media (max-width: 1000px) {
+    .cards-row1 { grid-template-columns: 1fr 1fr 1fr; }
+    .charts { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 600px) {
+    .cards-row1 { grid-template-columns: 1fr 1fr; }
+    .cards-row2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📊 持股 Dashboard</h1>
+  <span>可編輯商品名稱、張數、平均成本、當前股價；市值 / 損益 / 報酬率 / 總資產自動計算</span>
+</header>
+
+<div class="container">
+
+  <!-- Row 1: 5 cards -->
+  <div class="cards-row1">
+    <div class="card">
+      <label>總成本</label>
+      <div class="val neutral" id="totalCost">—</div>
+      <div class="sub">買入成本總計</div>
+    </div>
+    <div class="card">
+      <label>總市值（持股）</label>
+      <div class="val neutral" id="totalValue">—</div>
+      <div class="sub">現在持股市值</div>
+    </div>
+    <div class="card cash">
+      <label>💵 可動用現金</label>
+      <div class="cash-wrap">
+        <span class="currency">NT$</span>
+        <input type="number" id="cashInput" placeholder="0" min="0" step="1" oninput="update()">
+      </div>
+      <div class="sub" style="margin-top:8px">手動輸入現金部位</div>
+    </div>
+    <div class="card">
+      <label>未實現損益</label>
+      <div class="val" id="totalPnl">—</div>
+      <div class="sub" id="totalPnlPct">—</div>
+    </div>
+    <div class="card">
+      <label>獲利持股 / 總數</label>
+      <div class="val neutral" id="winRate">—</div>
+      <div class="sub">盈虧持股比</div>
+    </div>
+  </div>
+
+  <!-- Row 2: Total Assets (full width) -->
+  <div class="cards-row2">
+    <div class="card total" style="grid-column: span 2;">
+      <label>🏦 總資產（持股市值 ＋ 現金）</label>
+      <div class="val" id="totalAssets">—</div>
+      <div class="sub" id="totalAssetsSub">請輸入現金部位以計算總資產</div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="section-header">
+    <div class="section-title">持股明細</div>
+    <button class="btn-add" onclick="openModal()">＋ 新增持股</button>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>商品名稱</th>
+          <th>張數（股）</th>
+          <th>平均成本</th>
+          <th>當前股價</th>
+          <th>成本總額</th>
+          <th>市值</th>
+          <th>損益</th>
+          <th>報酬率</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts">
+    <div class="chart-box">
+      <div class="section-title">報酬率比較（%）</div>
+      <canvas id="barChart"></canvas>
+    </div>
+    <div class="chart-box">
+      <div class="section-title">資產比例（含現金）</div>
+      <canvas id="pieChart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- Add Modal -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h2>新增持股</h2>
+    <div class="field"><label>商品名稱</label><input id="m_name" type="text" placeholder="例：台積電"></div>
+    <div class="field"><label>張數（股）</label><input id="m_qty" type="number" placeholder="1000" min="0"></div>
+    <div class="field"><label>平均成本（元）</label><input id="m_cost" type="number" placeholder="0.00" min="0" step="0.01"></div>
+    <div class="field"><label>當前股價（元）</label><input id="m_price" type="number" placeholder="0.00" min="0" step="0.01"></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">取消</button>
+      <button class="btn-confirm" onclick="addStock()">確認新增</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let stocks = [
+  { name: '川湖凱基64購01', qty: 60000, avgCost: 0.99,   price: 0.97   },
+  { name: '達邁',           qty:  1000, avgCost: 108.6,  price: 106.50 },
+  { name: '華星光',         qty:  2000, avgCost: 712.16, price: 624.00 },
+  { name: '良維元大63購01', qty: 40000, avgCost: 1.34,   price: 1.23   },
+  { name: '宏捷科',         qty:  2000, avgCost: 170.91, price: 169.00 },
+  { name: '台汽電',         qty: 21752, avgCost: 47.41,  price: 66.60  },
+  { name: '中鼎',           qty:  9000, avgCost: 40.18,  price: 39.65  },
+];
+
+let barChart, pieChart;
+
+const COLORS = [
+  '#4a90d9','#f5a623','#e85d75','#a78bfa','#34d4c8','#fb923c',
+  '#60a5fa','#f87171','#34d399','#fbbf24','#c084fc','#22d3ee','#f97316'
+];
+const CASH_COLOR = '#26d87c';
+
+const fmt    = n => Math.round(n).toLocaleString('zh-TW');
+const fmtDec = (n, d=2) => n.toLocaleString('zh-TW', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+// ── Modal ─────────────────────────────────────────────────
+function openModal() {
+  ['m_name','m_qty','m_cost','m_price'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('modalBg').classList.add('open');
+  setTimeout(() => document.getElementById('m_name').focus(), 50);
+}
+function closeModal() { document.getElementById('modalBg').classList.remove('open'); }
+document.getElementById('modalBg').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+function addStock() {
+  const name  = document.getElementById('m_name').value.trim();
+  const qty   = parseFloat(document.getElementById('m_qty').value)   || 0;
+  const cost  = parseFloat(document.getElementById('m_cost').value)  || 0;
+  const price = parseFloat(document.getElementById('m_price').value) || 0;
+  if (!name) { document.getElementById('m_name').focus(); return; }
+  stocks.push({ name, qty, avgCost: cost, price });
+  closeModal();
+  buildTable();
+  update();
+}
+
+// ── Delete ────────────────────────────────────────────────
+function deleteStock(i) {
+  stocks.splice(i, 1);
+  buildTable();
+  update();
+}
+
+// ── Build table ───────────────────────────────────────────
+function buildTable() {
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+  stocks.forEach((s, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text"   data-i="${i}" data-field="name"    value="${s.name}"></td>
+      <td><input type="number" data-i="${i}" data-field="qty"     value="${s.qty}"     min="0" step="1"></td>
+      <td><input type="number" data-i="${i}" data-field="avgCost" value="${s.avgCost}" min="0" step="0.01"></td>
+      <td><input type="number" data-i="${i}" data-field="price"   value="${s.price}"   min="0" step="0.01"></td>
+      <td class="ro" id="cost_${i}">—</td>
+      <td class="ro" id="mktval_${i}">—</td>
+      <td class="ro" id="pnl_${i}">—</td>
+      <td id="ret_${i}">—</td>
+      <td class="center"><button class="btn-del" onclick="deleteStock(${i})">刪除</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  tbody.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const i = +inp.dataset.i, f = inp.dataset.field;
+      stocks[i][f] = f === 'name' ? inp.value : (parseFloat(inp.value) || 0);
+      update();
+    });
+  });
+}
+
+// ── Update ────────────────────────────────────────────────
+function update() {
+  const labels = [], retData = [], pieLabels = [], pieData = [], pieColors = [];
+  let totalCost = 0, totalValue = 0, wins = 0;
+
+  stocks.forEach((s, i) => {
+    const cost   = s.qty * s.avgCost;
+    const mktval = s.qty * s.price;
+    const pnl    = mktval - cost;
+    const ret    = s.avgCost > 0 ? (s.price - s.avgCost) / s.avgCost * 100 : 0;
+
+    totalCost  += cost;
+    totalValue += mktval;
+    if (pnl >= 0) wins++;
+
+    document.getElementById(`cost_${i}`).textContent   = fmt(cost);
+    document.getElementById(`mktval_${i}`).textContent = fmt(mktval);
+
+    const pnlEl = document.getElementById(`pnl_${i}`);
+    pnlEl.textContent = (pnl >= 0 ? '+' : '') + fmt(pnl);
+    pnlEl.className   = pnl >= 0 ? 'positive ro' : 'negative ro';
+
+    document.getElementById(`ret_${i}`).innerHTML =
+      `<span class="pill ${ret >= 0 ? 'pos' : 'neg'}">${ret >= 0 ? '+' : ''}${fmtDec(ret)}%</span>`;
+
+    labels.push(s.name);
+    retData.push(parseFloat(ret.toFixed(2)));
+    if (mktval > 0) { pieLabels.push(s.name); pieData.push(mktval); pieColors.push(COLORS[i % COLORS.length]); }
+  });
+
+  // Cash
+  const cash = parseFloat(document.getElementById('cashInput').value) || 0;
+  const totalAssets = totalValue + cash;
+
+  if (cash > 0) { pieLabels.push('可動用現金'); pieData.push(cash); pieColors.push(CASH_COLOR); }
+
+  // Cards
+  const totalPnl = totalValue - totalCost;
+  const totalPct = totalCost > 0 ? totalPnl / totalCost * 100 : 0;
+  const s = totalPnl >= 0 ? '+' : '';
+
+  document.getElementById('totalCost').textContent  = 'NT$ ' + fmt(totalCost);
+  document.getElementById('totalValue').textContent = 'NT$ ' + fmt(totalValue);
+  const pnlEl = document.getElementById('totalPnl');
+  pnlEl.textContent = s + 'NT$ ' + fmt(totalPnl);
+  pnlEl.className   = 'val ' + (totalPnl >= 0 ? 'positive' : 'negative');
+  document.getElementById('totalPnlPct').textContent = s + fmtDec(totalPct) + '%';
+  document.getElementById('winRate').textContent = `${wins} / ${stocks.length}`;
+  document.getElementById('totalAssets').textContent = 'NT$ ' + fmt(totalAssets);
+  document.getElementById('totalAssetsSub').textContent =
+    cash > 0
+      ? `持股市值 NT$${fmt(totalValue)} ＋ 現金 NT$${fmt(cash)}`
+      : '請在「可動用現金」欄位輸入現金部位';
+
+  updateCharts(labels, retData, pieLabels, pieData, pieColors);
+}
+
+// ── Charts ────────────────────────────────────────────────
+function updateCharts(labels, retData, pieLabels, pieData, pieColors) {
+  const barColors = retData.map(v => v >= 0 ? '#26d87c' : '#ff5a5a');
+
+  if (barChart) {
+    barChart.data.labels = labels;
+    barChart.data.datasets[0].data = retData;
+    barChart.data.datasets[0].backgroundColor = barColors;
+    barChart.update();
+  } else {
+    barChart = new Chart(document.getElementById('barChart'), {
+      type: 'bar',
+      data: { labels, datasets: [{ label: '報酬率 (%)', data: retData, backgroundColor: barColors, borderRadius: 6, borderSkipped: false }] },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y > 0 ? '+' : ''}${ctx.parsed.y.toFixed(2)}%` } }
+        },
+        scales: {
+          x: { ticks: { color: '#7080a0', font: { size: 11 } }, grid: { color: '#1e2636' } },
+          y: { ticks: { color: '#7080a0', callback: v => v + '%' }, grid: { color: '#1e2636' }, border: { dash: [4,4] } }
+        }
+      }
+    });
+  }
+
+  if (pieChart) {
+    pieChart.data.labels = pieLabels;
+    pieChart.data.datasets[0].data = pieData;
+    pieChart.data.datasets[0].backgroundColor = pieColors;
+    pieChart.update();
+  } else {
+    pieChart = new Chart(document.getElementById('pieChart'), {
+      type: 'doughnut',
+      data: { labels: pieLabels, datasets: [{ data: pieData, backgroundColor: pieColors, borderColor: '#0f1117', borderWidth: 3, hoverOffset: 8 }] },
+      options: {
+        responsive: true,
+        cutout: '58%',
+        plugins: {
+          legend: { position: 'right', labels: { color: '#a0b0d0', font: { size: 11 }, padding: 12, boxWidth: 12 } },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                const pct = total > 0 ? (ctx.parsed / total * 100).toFixed(1) : 0;
+                return ` NT$${fmt(ctx.parsed)}  (${pct}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+}
+
+buildTable();
+update();
+</script>
+</body>
+</html>
