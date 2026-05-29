@@ -326,6 +326,12 @@
     </div>
   </div>
 
+  <!-- P&L Bar Chart (full width) -->
+  <div class="chart-box" style="margin-bottom:32px">
+    <div class="section-title" style="margin-bottom:14px">未實現損益比較（NT$）</div>
+    <canvas id="pnlChart" style="max-height:300px"></canvas>
+  </div>
+
 </div>
 
 <div class="modal-bg" id="modalBg">
@@ -355,7 +361,7 @@ const DEFAULT_STOCKS = [
 const STORAGE_KEY = 'portfolio_dashboard_v1';
 
 let stocks = [];
-let barChart, pieChart;
+let barChart, pieChart, pnlChart;
 let isLight = false;
 
 const COLORS = ['#4a90d9','#f5a623','#e85d75','#a78bfa','#34d4c8','#fb923c','#60a5fa','#f87171','#34d399','#fbbf24','#c084fc','#22d3ee','#f97316'];
@@ -371,8 +377,9 @@ function applyTheme(light) {
   document.getElementById('themeIcon').textContent  = light ? '🌙' : '☀️';
   document.getElementById('themeLabel').textContent = light ? '深色模式' : '淺色模式';
   // Rebuild charts so colors update
-  if (barChart) { barChart.destroy(); barChart = null; }
-  if (pieChart) { pieChart.destroy(); pieChart = null; }
+  if (barChart)  { barChart.destroy();  barChart  = null; }
+  if (pieChart)  { pieChart.destroy();  pieChart  = null; }
+  if (pnlChart)  { pnlChart.destroy();  pnlChart  = null; }
   update();
 }
 
@@ -432,7 +439,7 @@ function buildTable() {
 
 // ── Update ────────────────────────────────────────────────
 function update() {
-  const labels=[], retData=[], pieLabels=[], pieData=[], pieColors=[];
+  const labels=[], retData=[], pnlData=[], pieLabels=[], pieData=[], pieColors=[];
   let totalCost=0, totalValue=0, wins=0;
 
   const posColor = isLight ? '#16a34a' : '#26d87c';
@@ -461,6 +468,7 @@ function update() {
 
     labels.push(s.name);
     retData.push(parseFloat(ret.toFixed(2)));
+    pnlData.push(Math.round(pnl));
     if (mktval > 0) { pieLabels.push(s.name); pieData.push(mktval); pieColors.push(COLORS[i % COLORS.length]); }
   });
 
@@ -527,6 +535,38 @@ function update() {
         plugins: {
           legend: { position: 'right', labels: { color: legendColor, font: { size: 11 }, padding: 12, boxWidth: 12 } },
           tooltip: { callbacks: { label: ctx => { const t=ctx.dataset.data.reduce((a,b)=>a+b,0); return ` NT$${fmt(ctx.parsed)}  (${t>0?(ctx.parsed/t*100).toFixed(1):0}%)`; } } }
+        }
+      }
+    });
+  }
+
+  // P&L bar chart
+  const pnlColors = pnlData.map(v => v >= 0 ? posColor : negColor);
+  if (pnlChart) {
+    pnlChart.data.labels = labels;
+    pnlChart.data.datasets[0].data = pnlData;
+    pnlChart.data.datasets[0].backgroundColor = pnlColors;
+    pnlChart.options.scales.x.ticks.color = tickColor;
+    pnlChart.options.scales.x.grid.color  = gridColor;
+    pnlChart.options.scales.y.ticks.color = tickColor;
+    pnlChart.options.scales.y.grid.color  = gridColor;
+    pnlChart.update();
+  } else {
+    pnlChart = new Chart(document.getElementById('pnlChart'), {
+      type: 'bar',
+      data: { labels, datasets: [{ label: '損益 (NT$)', data: pnlData, backgroundColor: pnlColors, borderRadius: 6, borderSkipped: false }] },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y >= 0 ? '+' : ''}NT$${ctx.parsed.y.toLocaleString('zh-TW')}` } }
+        },
+        scales: {
+          x: { ticks: { color: tickColor, font: { size: 11 } }, grid: { color: gridColor } },
+          y: {
+            ticks: { color: tickColor, callback: v => (v >= 0 ? '+' : '') + (v/1000).toFixed(0) + 'K' },
+            grid: { color: gridColor }, border: { dash: [4,4] }
+          }
         }
       }
     });
