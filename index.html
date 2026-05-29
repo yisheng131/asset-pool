@@ -6,133 +6,236 @@
 <title>持股 Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif; background: #0f1117; color: #e0e0e0; min-height: 100vh; }
+  /* ── CSS Variables: Dark (default) ── */
+  :root {
+    --bg:          #0f1117;
+    --bg2:         #1a1f2e;
+    --bg3:         #1e2636;
+    --bg-hover:    #1a2233;
+    --border:      #2a3a5c;
+    --text:        #e0e0e0;
+    --text-muted:  #7080a0;
+    --text-sub:    #6b7db3;
+    --text-link:   #a0c4ff;
+    --header-bg:   linear-gradient(135deg,#1a1f2e 0%,#16213e 100%);
+    --header-text: #fff;
+    --input-bg:    #0f1117;
+    --ro-color:    #c0d0e8;
+    --section-title: #a0b0d0;
+    --card-bg-cash:  #111e1a;
+    --card-bd-cash:  #2a5c4a;
+    --card-bg-total: #111828;
+    --card-bd-total: #2a3f7c;
+    --chart-grid:  #1e2636;
+    --chart-tick:  #7080a0;
+    --modal-bg:    #1a1f2e;
+    --pill-pos-bg: #0d3b26;
+    --pill-neg-bg: #3b1212;
+    --legend-color:#a0b0d0;
+    --pie-border:  #0f1117;
+  }
 
-  header { background: linear-gradient(135deg, #1a1f2e 0%, #16213e 100%); padding: 20px 32px; border-bottom: 1px solid #2a3a5c; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-  header h1 { font-size: 22px; font-weight: 700; color: #fff; }
-  header span { font-size: 13px; color: #6b7db3; display: block; margin-top: 3px; }
-  .header-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-  .save-info { font-size: 12px; color: #6b7db3; text-align: right; }
-  .save-info .saved-time { color: #3db886; }
+  /* ── CSS Variables: Light ── */
+  body.light {
+    --bg:          #f0f2f7;
+    --bg2:         #ffffff;
+    --bg3:         #e8ecf4;
+    --bg-hover:    #edf0f8;
+    --border:      #ccd4e8;
+    --text:        #1a202c;
+    --text-muted:  #5a6a8a;
+    --text-sub:    #6070a0;
+    --text-link:   #2563eb;
+    --header-bg:   linear-gradient(135deg,#2c3e6e 0%,#1e3a7c 100%);
+    --header-text: #fff;
+    --input-bg:    #f8f9fc;
+    --ro-color:    #334155;
+    --section-title:#475a80;
+    --card-bg-cash:  #f0faf5;
+    --card-bd-cash:  #86efac;
+    --card-bg-total: #eff6ff;
+    --card-bd-total: #93c5fd;
+    --chart-grid:  #e2e8f0;
+    --chart-tick:  #64748b;
+    --modal-bg:    #ffffff;
+    --pill-pos-bg: #dcfce7;
+    --pill-neg-bg: #fee2e2;
+    --legend-color:#334155;
+    --pie-border:  #f0f2f7;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh;
+    transition: background 0.25s, color 0.25s;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--header-bg); padding: 18px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  }
+  header h1 { font-size: 22px; font-weight: 700; color: var(--header-text); }
+  header .sub { font-size: 13px; color: rgba(255,255,255,0.55); display: block; margin-top: 3px; }
+  .header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+  /* Theme toggle */
+  .theme-toggle {
+    background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 20px; padding: 6px 14px; cursor: pointer;
+    font-size: 13px; color: rgba(255,255,255,0.85); display: flex; align-items: center; gap: 6px;
+    transition: background 0.15s; white-space: nowrap;
+  }
+  .theme-toggle:hover { background: rgba(255,255,255,0.2); }
+  .theme-toggle .icon { font-size: 15px; }
+
+  /* Save button */
+  .save-info { font-size: 12px; color: rgba(255,255,255,0.45); text-align: right; }
+  .save-info .saved-time { color: #4ade80; }
   .btn-save {
     display: inline-flex; align-items: center; gap: 7px;
-    background: linear-gradient(135deg, #1a4a2e, #1e5c36);
+    background: linear-gradient(135deg,#1a4a2e,#1e5c36);
     border: 1px solid #2a7a4a; color: #26d87c;
-    padding: 9px 20px; border-radius: 9px; font-size: 14px; font-weight: 700;
+    padding: 9px 18px; border-radius: 9px; font-size: 13px; font-weight: 700;
     cursor: pointer; transition: all 0.15s; white-space: nowrap;
   }
-  .btn-save:hover { background: linear-gradient(135deg, #1e5c36, #237040); border-color: #3db886; }
+  .btn-save:hover { background: linear-gradient(135deg,#1e5c36,#237040); border-color: #3db886; }
   .btn-save.saving { opacity: 0.7; cursor: default; }
-  .btn-save .icon { font-size: 16px; }
 
+  /* ── Container ── */
   .container { max-width: 1400px; margin: 0 auto; padding: 24px 32px; }
 
   /* ── Cards ── */
-  .cards-row1 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 14px; }
+  .cards-row1 { display: grid; grid-template-columns: repeat(5,1fr); gap: 16px; margin-bottom: 14px; }
   .cards-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
 
-  .card { background: #1a1f2e; border: 1px solid #2a3a5c; border-radius: 12px; padding: 18px 20px; }
-  .card label { font-size: 11px; color: #6b7db3; text-transform: uppercase; letter-spacing: 0.8px; display: block; }
-  .card .val { font-size: 24px; font-weight: 700; margin-top: 6px; }
-  .card .sub { font-size: 12px; color: #6b7db3; margin-top: 4px; }
+  .card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 20px;
+    transition: background 0.25s, border-color 0.25s;
+  }
+  .card label { font-size: 11px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.8px; display: block; }
+  .card .val  { font-size: 24px; font-weight: 700; margin-top: 6px; }
+  .card .sub  { font-size: 12px; color: var(--text-sub); margin-top: 4px; }
 
-  /* cash card */
-  .card.cash { border-color: #2a5c4a; background: #111e1a; }
-  .card.cash label { color: #3db886; }
-  .cash-wrap { display: flex; align-items: baseline; gap: 5px; margin-top: 6px; }
-  .cash-wrap .currency { font-size: 15px; color: #3db886; font-weight: 700; }
+  .card.cash  { background: var(--card-bg-cash); border-color: var(--card-bd-cash); }
+  .card.cash label { color: #16a34a; }
+  .cash-wrap  { display: flex; align-items: baseline; gap: 5px; margin-top: 6px; }
+  .cash-wrap .currency { font-size: 15px; color: #16a34a; font-weight: 700; }
   .cash-wrap input {
-    background: transparent; border: none; border-bottom: 1.5px solid #2a5c4a;
-    color: #26d87c; font-size: 22px; font-weight: 700; width: 100%;
+    background: transparent; border: none; border-bottom: 1.5px solid var(--card-bd-cash);
+    color: #16a34a; font-size: 22px; font-weight: 700; width: 100%;
     padding: 1px 0; font-family: inherit;
   }
-  .cash-wrap input:focus { outline: none; border-bottom-color: #3db886; }
+  body.light .cash-wrap input { color: #15803d; }
+  .cash-wrap input:focus { outline: none; border-bottom-color: #22c55e; }
   .cash-wrap input::-webkit-inner-spin-button,
   .cash-wrap input::-webkit-outer-spin-button { -webkit-appearance: none; }
 
-  /* total assets card */
-  .card.total { border-color: #2a3f7c; background: #111828; }
-  .card.total label { color: #7ec8f7; }
-  .card.total .val { color: #7ec8f7; }
+  .card.total { background: var(--card-bg-total); border-color: var(--card-bd-total); }
+  .card.total label { color: #3b82f6; }
+  .card.total .val  { color: #3b82f6; }
 
-  .positive { color: #26d87c; }
-  .negative { color: #ff5a5a; }
-  .neutral  { color: #e0e0e0; }
+  .positive { color: #16a34a; }
+  .negative { color: #dc2626; }
+  .neutral  { color: var(--text); }
+  body:not(.light) .positive { color: #26d87c; }
+  body:not(.light) .negative { color: #ff5a5a; }
 
-  /* ── Table ── */
+  /* ── Section ── */
   .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-  .section-title { font-size: 14px; font-weight: 600; color: #a0b0d0; text-transform: uppercase; letter-spacing: 0.6px; }
+  .section-title  { font-size: 13px; font-weight: 600; color: var(--section-title); text-transform: uppercase; letter-spacing: 0.6px; }
 
   .btn-add {
     display: inline-flex; align-items: center; gap: 6px;
-    background: #1e3a5f; border: 1px solid #2a6496; color: #7ec8f7;
+    background: var(--bg3); border: 1px solid var(--border); color: var(--text-link);
     padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: background 0.15s;
   }
-  .btn-add:hover { background: #254d7a; }
+  .btn-add:hover { filter: brightness(1.1); }
 
+  /* ── Table ── */
   .table-wrap { overflow-x: auto; margin-bottom: 32px; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  thead tr { background: #1e2636; }
-  th { padding: 10px 12px; text-align: right; color: #7080a0; font-weight: 600; white-space: nowrap; border-bottom: 1px solid #2a3a5c; }
+  thead tr { background: var(--bg3); }
+  th {
+    padding: 10px 12px; text-align: right; color: var(--text-muted);
+    font-weight: 600; white-space: nowrap; border-bottom: 1px solid var(--border);
+  }
   th:first-child { text-align: left; }
   th:last-child  { text-align: center; }
-  tbody tr { border-bottom: 1px solid #1e2636; transition: background 0.15s; }
-  tbody tr:hover { background: #1a2233; }
+  tbody tr { border-bottom: 1px solid var(--bg3); transition: background 0.15s; }
+  tbody tr:hover { background: var(--bg-hover); }
   td { padding: 8px 12px; text-align: right; vertical-align: middle; }
   td.center { text-align: center; }
 
   input[type=text], input[type=number] {
-    background: #0f1117; border: 1px solid #2a3a5c; border-radius: 6px;
-    color: #e0e0e0; padding: 5px 8px; font-size: 13px; transition: border-color 0.2s;
-    font-family: inherit;
+    background: var(--input-bg); border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); padding: 5px 8px; font-size: 13px; font-family: inherit;
+    transition: border-color 0.2s, background 0.25s;
   }
-  input[type=text]   { width: 110px; text-align: left; color: #a0c4ff; font-weight: 600; }
+  input[type=text]   { width: 110px; text-align: left; color: var(--text-link); font-weight: 600; }
   input[type=number] { width: 90px; text-align: right; }
-  input[type=text]:focus, input[type=number]:focus { outline: none; border-color: #4a90d9; }
+  input[type=text]:focus, input[type=number]:focus { outline: none; border-color: #3b82f6; }
 
-  .ro { color: #c0d0e8; }
+  .ro { color: var(--ro-color); }
   .pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
-  .pill.pos { background: #0d3b26; color: #26d87c; }
-  .pill.neg { background: #3b1212; color: #ff5a5a; }
+  .pill.pos { background: var(--pill-pos-bg); color: #16a34a; }
+  .pill.neg { background: var(--pill-neg-bg); color: #dc2626; }
+  body:not(.light) .pill.pos { color: #26d87c; }
+  body:not(.light) .pill.neg { color: #ff5a5a; }
 
   .btn-del {
-    background: none; border: 1px solid #4a2020; color: #e05555;
-    border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer;
+    background: none; border: 1px solid #fca5a5; color: #dc2626;
+    border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; transition: background 0.15s;
   }
-  .btn-del:hover { background: #3b1212; }
+  body:not(.light) .btn-del { border-color: #4a2020; color: #e05555; }
+  .btn-del:hover { background: var(--pill-neg-bg); }
 
   /* ── Charts ── */
   .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
-  .chart-box { background: #1a1f2e; border: 1px solid #2a3a5c; border-radius: 12px; padding: 20px; }
+  .chart-box {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; transition: background 0.25s;
+  }
   .chart-box canvas { max-height: 320px; }
 
   /* ── Modal ── */
   .modal-bg {
-    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
     align-items: center; justify-content: center; z-index: 100;
   }
   .modal-bg.open { display: flex; }
-  .modal { background: #1a1f2e; border: 1px solid #2a3a5c; border-radius: 14px; padding: 28px 32px; width: 360px; max-width: 95vw; }
-  .modal h2 { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 20px; }
+  .modal {
+    background: var(--modal-bg); border: 1px solid var(--border);
+    border-radius: 14px; padding: 28px 32px; width: 360px; max-width: 95vw;
+    transition: background 0.25s;
+  }
+  .modal h2 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 20px; }
   .modal .field { margin-bottom: 14px; }
-  .modal .field label { display: block; font-size: 12px; color: #7080a0; margin-bottom: 5px; }
-  .modal .field input { width: 100%; background: #0f1117; border: 1px solid #2a3a5c; border-radius: 8px; color: #e0e0e0; padding: 8px 10px; font-size: 14px; font-family: inherit; }
-  .modal .field input:focus { outline: none; border-color: #4a90d9; }
+  .modal .field label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; }
+  .modal .field input {
+    width: 100%; background: var(--input-bg); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); padding: 8px 10px; font-size: 14px; font-family: inherit;
+  }
+  .modal .field input:focus { outline: none; border-color: #3b82f6; }
   .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
-  .btn-confirm { flex:1; background:#1e3a5f; border:1px solid #2a6496; color:#7ec8f7; padding:9px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; }
-  .btn-confirm:hover { background:#254d7a; }
-  .btn-cancel  { flex:1; background:#1e2636; border:1px solid #2a3a5c; color:#7080a0; padding:9px; border-radius:8px; font-size:14px; cursor:pointer; }
-  .btn-cancel:hover { background:#252f42; }
+  .btn-confirm {
+    flex:1; background: #1e3a5f; border: 1px solid #2a6496; color: #7ec8f7;
+    padding: 9px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  body.light .btn-confirm { background: #2563eb; border-color: #1d4ed8; color: #fff; }
+  .btn-confirm:hover { filter: brightness(1.15); }
+  .btn-cancel {
+    flex:1; background: var(--bg3); border: 1px solid var(--border); color: var(--text-muted);
+    padding: 9px; border-radius: 8px; font-size: 14px; cursor: pointer;
+  }
+  .btn-cancel:hover { filter: brightness(0.95); }
 
-  @media (max-width: 1000px) {
-    .cards-row1 { grid-template-columns: 1fr 1fr 1fr; }
-    .charts { grid-template-columns: 1fr; }
-  }
-  @media (max-width: 600px) {
-    .cards-row1 { grid-template-columns: 1fr 1fr; }
-    .cards-row2 { grid-template-columns: 1fr; }
-  }
+  @media (max-width: 1000px) { .cards-row1 { grid-template-columns: 1fr 1fr 1fr; } .charts { grid-template-columns: 1fr; } }
+  @media (max-width: 600px)  { .cards-row1 { grid-template-columns: 1fr 1fr; } .cards-row2 { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -140,22 +243,23 @@
 <header>
   <div>
     <h1>📊 持股 Dashboard</h1>
-    <span>可編輯商品名稱、張數、平均成本、當前股價；市值 / 損益 / 報酬率 / 總資產自動計算</span>
+    <span class="sub">可編輯商品名稱、張數、平均成本、當前股價；市值 / 損益 / 報酬率 / 總資產自動計算</span>
   </div>
   <div class="header-right">
+    <button class="theme-toggle" id="themeBtn" onclick="toggleTheme()">
+      <span class="icon" id="themeIcon">☀️</span>
+      <span id="themeLabel">淺色模式</span>
+    </button>
     <div class="save-info">
       <div id="saveStatus">尚未儲存</div>
       <div id="saveTime" class="saved-time"></div>
     </div>
-    <button class="btn-save" onclick="saveData()">
-      <span class="icon">💾</span> 更新資產並儲存
-    </button>
+    <button class="btn-save" onclick="saveData()">💾 更新資產並儲存</button>
   </div>
 </header>
 
 <div class="container">
 
-  <!-- Row 1: 5 cards -->
   <div class="cards-row1">
     <div class="card">
       <label>總成本</label>
@@ -187,16 +291,14 @@
     </div>
   </div>
 
-  <!-- Row 2: Total Assets (full width) -->
   <div class="cards-row2">
-    <div class="card total" style="grid-column: span 2;">
+    <div class="card total" style="grid-column:span 2">
       <label>🏦 總資產（持股市值 ＋ 現金）</label>
       <div class="val" id="totalAssets">—</div>
       <div class="sub" id="totalAssetsSub">請輸入現金部位以計算總資產</div>
     </div>
   </div>
 
-  <!-- Table -->
   <div class="section-header">
     <div class="section-title">持股明細</div>
     <button class="btn-add" onclick="openModal()">＋ 新增持股</button>
@@ -205,36 +307,27 @@
     <table>
       <thead>
         <tr>
-          <th>商品名稱</th>
-          <th>張數（股）</th>
-          <th>平均成本</th>
-          <th>當前股價</th>
-          <th>成本總額</th>
-          <th>市值</th>
-          <th>損益</th>
-          <th>報酬率</th>
-          <th>操作</th>
+          <th>商品名稱</th><th>張數（股）</th><th>平均成本</th><th>當前股價</th>
+          <th>成本總額</th><th>市值</th><th>損益</th><th>報酬率</th><th>操作</th>
         </tr>
       </thead>
       <tbody id="tbody"></tbody>
     </table>
   </div>
 
-  <!-- Charts -->
   <div class="charts">
     <div class="chart-box">
-      <div class="section-title">報酬率比較（%）</div>
+      <div class="section-title" style="margin-bottom:14px">報酬率比較（%）</div>
       <canvas id="barChart"></canvas>
     </div>
     <div class="chart-box">
-      <div class="section-title">資產比例（含現金）</div>
+      <div class="section-title" style="margin-bottom:14px">資產比例（含現金）</div>
       <canvas id="pieChart"></canvas>
     </div>
   </div>
 
 </div>
 
-<!-- Add Modal -->
 <div class="modal-bg" id="modalBg">
   <div class="modal">
     <h2>新增持股</h2>
@@ -262,17 +355,31 @@ const DEFAULT_STOCKS = [
 const STORAGE_KEY = 'portfolio_dashboard_v1';
 
 let stocks = [];
-
 let barChart, pieChart;
+let isLight = false;
 
-const COLORS = [
-  '#4a90d9','#f5a623','#e85d75','#a78bfa','#34d4c8','#fb923c',
-  '#60a5fa','#f87171','#34d399','#fbbf24','#c084fc','#22d3ee','#f97316'
-];
-const CASH_COLOR = '#26d87c';
+const COLORS = ['#4a90d9','#f5a623','#e85d75','#a78bfa','#34d4c8','#fb923c','#60a5fa','#f87171','#34d399','#fbbf24','#c084fc','#22d3ee','#f97316'];
+const CASH_COLOR = '#22c55e';
 
 const fmt    = n => Math.round(n).toLocaleString('zh-TW');
 const fmtDec = (n, d=2) => n.toLocaleString('zh-TW', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+// ── Theme ─────────────────────────────────────────────────
+function applyTheme(light) {
+  isLight = light;
+  document.body.classList.toggle('light', light);
+  document.getElementById('themeIcon').textContent  = light ? '🌙' : '☀️';
+  document.getElementById('themeLabel').textContent = light ? '深色模式' : '淺色模式';
+  // Rebuild charts so colors update
+  if (barChart) { barChart.destroy(); barChart = null; }
+  if (pieChart) { pieChart.destroy(); pieChart = null; }
+  update();
+}
+
+function toggleTheme() {
+  applyTheme(!isLight);
+  localStorage.setItem('portfolio_theme', isLight ? 'light' : 'dark');
+}
 
 // ── Modal ─────────────────────────────────────────────────
 function openModal() {
@@ -290,17 +397,10 @@ function addStock() {
   const price = parseFloat(document.getElementById('m_price').value) || 0;
   if (!name) { document.getElementById('m_name').focus(); return; }
   stocks.push({ name, qty, avgCost: cost, price });
-  closeModal();
-  buildTable();
-  update();
+  closeModal(); buildTable(); update();
 }
 
-// ── Delete ────────────────────────────────────────────────
-function deleteStock(i) {
-  stocks.splice(i, 1);
-  buildTable();
-  update();
-}
+function deleteStock(i) { stocks.splice(i,1); buildTable(); update(); }
 
 // ── Build table ───────────────────────────────────────────
 function buildTable() {
@@ -321,7 +421,6 @@ function buildTable() {
     `;
     tbody.appendChild(tr);
   });
-
   tbody.querySelectorAll('input').forEach(inp => {
     inp.addEventListener('input', () => {
       const i = +inp.dataset.i, f = inp.dataset.field;
@@ -333,10 +432,16 @@ function buildTable() {
 
 // ── Update ────────────────────────────────────────────────
 function update() {
-  const labels = [], retData = [], pieLabels = [], pieData = [], pieColors = [];
-  let totalCost = 0, totalValue = 0, wins = 0;
+  const labels=[], retData=[], pieLabels=[], pieData=[], pieColors=[];
+  let totalCost=0, totalValue=0, wins=0;
 
-  stocks.forEach((s, i) => {
+  const posColor = isLight ? '#16a34a' : '#26d87c';
+  const negColor = isLight ? '#dc2626' : '#ff5a5a';
+  const gridColor = isLight ? '#e2e8f0' : '#1e2636';
+  const tickColor = isLight ? '#64748b' : '#7080a0';
+  const legendColor = isLight ? '#334155' : '#a0b0d0';
+
+  stocks.forEach((s,i) => {
     const cost   = s.qty * s.avgCost;
     const mktval = s.qty * s.price;
     const pnl    = mktval - cost;
@@ -348,11 +453,9 @@ function update() {
 
     document.getElementById(`cost_${i}`).textContent   = fmt(cost);
     document.getElementById(`mktval_${i}`).textContent = fmt(mktval);
-
     const pnlEl = document.getElementById(`pnl_${i}`);
     pnlEl.textContent = (pnl >= 0 ? '+' : '') + fmt(pnl);
     pnlEl.className   = pnl >= 0 ? 'positive ro' : 'negative ro';
-
     document.getElementById(`ret_${i}`).innerHTML =
       `<span class="pill ${ret >= 0 ? 'pos' : 'neg'}">${ret >= 0 ? '+' : ''}${fmtDec(ret)}%</span>`;
 
@@ -361,41 +464,37 @@ function update() {
     if (mktval > 0) { pieLabels.push(s.name); pieData.push(mktval); pieColors.push(COLORS[i % COLORS.length]); }
   });
 
-  // Cash
   const cash = parseFloat(document.getElementById('cashInput').value) || 0;
   const totalAssets = totalValue + cash;
-
   if (cash > 0) { pieLabels.push('可動用現金'); pieData.push(cash); pieColors.push(CASH_COLOR); }
 
-  // Cards
   const totalPnl = totalValue - totalCost;
   const totalPct = totalCost > 0 ? totalPnl / totalCost * 100 : 0;
-  const s = totalPnl >= 0 ? '+' : '';
+  const sg = totalPnl >= 0 ? '+' : '';
 
   document.getElementById('totalCost').textContent  = 'NT$ ' + fmt(totalCost);
   document.getElementById('totalValue').textContent = 'NT$ ' + fmt(totalValue);
   const pnlEl = document.getElementById('totalPnl');
-  pnlEl.textContent = s + 'NT$ ' + fmt(totalPnl);
+  pnlEl.textContent = sg + 'NT$ ' + fmt(totalPnl);
   pnlEl.className   = 'val ' + (totalPnl >= 0 ? 'positive' : 'negative');
-  document.getElementById('totalPnlPct').textContent = s + fmtDec(totalPct) + '%';
+  document.getElementById('totalPnlPct').textContent = sg + fmtDec(totalPct) + '%';
   document.getElementById('winRate').textContent = `${wins} / ${stocks.length}`;
   document.getElementById('totalAssets').textContent = 'NT$ ' + fmt(totalAssets);
   document.getElementById('totalAssetsSub').textContent =
-    cash > 0
-      ? `持股市值 NT$${fmt(totalValue)} ＋ 現金 NT$${fmt(cash)}`
-      : '請在「可動用現金」欄位輸入現金部位';
+    cash > 0 ? `持股市值 NT$${fmt(totalValue)} ＋ 現金 NT$${fmt(cash)}` : '請在「可動用現金」欄位輸入現金部位';
 
-  updateCharts(labels, retData, pieLabels, pieData, pieColors);
-}
-
-// ── Charts ────────────────────────────────────────────────
-function updateCharts(labels, retData, pieLabels, pieData, pieColors) {
-  const barColors = retData.map(v => v >= 0 ? '#26d87c' : '#ff5a5a');
+  // Charts
+  const barColors = retData.map(v => v >= 0 ? posColor : negColor);
+  const pieBorder = isLight ? '#f0f2f7' : '#0f1117';
 
   if (barChart) {
     barChart.data.labels = labels;
     barChart.data.datasets[0].data = retData;
     barChart.data.datasets[0].backgroundColor = barColors;
+    barChart.options.scales.x.ticks.color = tickColor;
+    barChart.options.scales.x.grid.color  = gridColor;
+    barChart.options.scales.y.ticks.color = tickColor;
+    barChart.options.scales.y.grid.color  = gridColor;
     barChart.update();
   } else {
     barChart = new Chart(document.getElementById('barChart'), {
@@ -403,13 +502,10 @@ function updateCharts(labels, retData, pieLabels, pieData, pieColors) {
       data: { labels, datasets: [{ label: '報酬率 (%)', data: retData, backgroundColor: barColors, borderRadius: 6, borderSkipped: false }] },
       options: {
         responsive: true,
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y > 0 ? '+' : ''}${ctx.parsed.y.toFixed(2)}%` } }
-        },
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y>0?'+':''}${ctx.parsed.y.toFixed(2)}%` } } },
         scales: {
-          x: { ticks: { color: '#7080a0', font: { size: 11 } }, grid: { color: '#1e2636' } },
-          y: { ticks: { color: '#7080a0', callback: v => v + '%' }, grid: { color: '#1e2636' }, border: { dash: [4,4] } }
+          x: { ticks: { color: tickColor, font: { size: 11 } }, grid: { color: gridColor } },
+          y: { ticks: { color: tickColor, callback: v => v+'%' }, grid: { color: gridColor }, border: { dash:[4,4] } }
         }
       }
     });
@@ -419,25 +515,18 @@ function updateCharts(labels, retData, pieLabels, pieData, pieColors) {
     pieChart.data.labels = pieLabels;
     pieChart.data.datasets[0].data = pieData;
     pieChart.data.datasets[0].backgroundColor = pieColors;
+    pieChart.data.datasets[0].borderColor = pieBorder;
+    pieChart.options.plugins.legend.labels.color = legendColor;
     pieChart.update();
   } else {
     pieChart = new Chart(document.getElementById('pieChart'), {
       type: 'doughnut',
-      data: { labels: pieLabels, datasets: [{ data: pieData, backgroundColor: pieColors, borderColor: '#0f1117', borderWidth: 3, hoverOffset: 8 }] },
+      data: { labels: pieLabels, datasets: [{ data: pieData, backgroundColor: pieColors, borderColor: pieBorder, borderWidth: 3, hoverOffset: 8 }] },
       options: {
-        responsive: true,
-        cutout: '58%',
+        responsive: true, cutout: '58%',
         plugins: {
-          legend: { position: 'right', labels: { color: '#a0b0d0', font: { size: 11 }, padding: 12, boxWidth: 12 } },
-          tooltip: {
-            callbacks: {
-              label: ctx => {
-                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-                const pct = total > 0 ? (ctx.parsed / total * 100).toFixed(1) : 0;
-                return ` NT$${fmt(ctx.parsed)}  (${pct}%)`;
-              }
-            }
-          }
+          legend: { position: 'right', labels: { color: legendColor, font: { size: 11 }, padding: 12, boxWidth: 12 } },
+          tooltip: { callbacks: { label: ctx => { const t=ctx.dataset.data.reduce((a,b)=>a+b,0); return ` NT$${fmt(ctx.parsed)}  (${t>0?(ctx.parsed/t*100).toFixed(1):0}%)`; } } }
         }
       }
     });
@@ -448,38 +537,27 @@ function updateCharts(labels, retData, pieLabels, pieData, pieColors) {
 function saveData() {
   const btn = document.querySelector('.btn-save');
   btn.classList.add('saving');
-  btn.innerHTML = '<span class="icon">✅</span> 已儲存！';
-
-  const payload = {
-    stocks,
-    cash: parseFloat(document.getElementById('cashInput').value) || 0,
-    savedAt: new Date().toISOString()
-  };
+  btn.textContent = '✅ 已儲存！';
+  const payload = { stocks, cash: parseFloat(document.getElementById('cashInput').value)||0, savedAt: new Date().toISOString() };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   showSaveTime(payload.savedAt);
-
-  setTimeout(() => {
-    btn.classList.remove('saving');
-    btn.innerHTML = '<span class="icon">💾</span> 更新資產並儲存';
-  }, 1800);
+  setTimeout(() => { btn.classList.remove('saving'); btn.textContent = '💾 更新資產並儲存'; }, 1800);
 }
 
 function showSaveTime(iso) {
-  const d = new Date(iso);
-  const pad = n => String(n).padStart(2,'0');
-  const str = `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const d = new Date(iso), pad = n => String(n).padStart(2,'0');
   document.getElementById('saveStatus').textContent = '上次儲存';
-  document.getElementById('saveTime').textContent   = str;
+  document.getElementById('saveTime').textContent   = `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function loadData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      const payload = JSON.parse(raw);
-      stocks = payload.stocks || DEFAULT_STOCKS;
-      document.getElementById('cashInput').value = payload.cash || '';
-      if (payload.savedAt) showSaveTime(payload.savedAt);
+      const p = JSON.parse(raw);
+      stocks = p.stocks || DEFAULT_STOCKS;
+      document.getElementById('cashInput').value = p.cash || '';
+      if (p.savedAt) showSaveTime(p.savedAt);
       return;
     }
   } catch(e) {}
@@ -488,6 +566,9 @@ function loadData() {
 }
 
 // ── Init ─────────────────────────────────────────────────
+const savedTheme = localStorage.getItem('portfolio_theme');
+if (savedTheme === 'light') applyTheme(true);
+
 loadData();
 buildTable();
 update();
