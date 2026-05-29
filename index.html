@@ -9,9 +9,22 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif; background: #0f1117; color: #e0e0e0; min-height: 100vh; }
 
-  header { background: linear-gradient(135deg, #1a1f2e 0%, #16213e 100%); padding: 20px 32px; border-bottom: 1px solid #2a3a5c; }
+  header { background: linear-gradient(135deg, #1a1f2e 0%, #16213e 100%); padding: 20px 32px; border-bottom: 1px solid #2a3a5c; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
   header h1 { font-size: 22px; font-weight: 700; color: #fff; }
-  header span { font-size: 13px; color: #6b7db3; }
+  header span { font-size: 13px; color: #6b7db3; display: block; margin-top: 3px; }
+  .header-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .save-info { font-size: 12px; color: #6b7db3; text-align: right; }
+  .save-info .saved-time { color: #3db886; }
+  .btn-save {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: linear-gradient(135deg, #1a4a2e, #1e5c36);
+    border: 1px solid #2a7a4a; color: #26d87c;
+    padding: 9px 20px; border-radius: 9px; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .btn-save:hover { background: linear-gradient(135deg, #1e5c36, #237040); border-color: #3db886; }
+  .btn-save.saving { opacity: 0.7; cursor: default; }
+  .btn-save .icon { font-size: 16px; }
 
   .container { max-width: 1400px; margin: 0 auto; padding: 24px 32px; }
 
@@ -125,8 +138,19 @@
 <body>
 
 <header>
-  <h1>📊 持股 Dashboard</h1>
-  <span>可編輯商品名稱、張數、平均成本、當前股價；市值 / 損益 / 報酬率 / 總資產自動計算</span>
+  <div>
+    <h1>📊 持股 Dashboard</h1>
+    <span>可編輯商品名稱、張數、平均成本、當前股價；市值 / 損益 / 報酬率 / 總資產自動計算</span>
+  </div>
+  <div class="header-right">
+    <div class="save-info">
+      <div id="saveStatus">尚未儲存</div>
+      <div id="saveTime" class="saved-time"></div>
+    </div>
+    <button class="btn-save" onclick="saveData()">
+      <span class="icon">💾</span> 更新資產並儲存
+    </button>
+  </div>
 </header>
 
 <div class="container">
@@ -226,7 +250,7 @@
 </div>
 
 <script>
-let stocks = [
+const DEFAULT_STOCKS = [
   { name: '川湖凱基64購01', qty: 60000, avgCost: 0.99,   price: 0.97   },
   { name: '達邁',           qty:  1000, avgCost: 108.6,  price: 106.50 },
   { name: '華星光',         qty:  2000, avgCost: 712.16, price: 624.00 },
@@ -235,6 +259,9 @@ let stocks = [
   { name: '台汽電',         qty: 21752, avgCost: 47.41,  price: 66.60  },
   { name: '中鼎',           qty:  9000, avgCost: 40.18,  price: 39.65  },
 ];
+const STORAGE_KEY = 'portfolio_dashboard_v1';
+
+let stocks = [];
 
 let barChart, pieChart;
 
@@ -417,6 +444,51 @@ function updateCharts(labels, retData, pieLabels, pieData, pieColors) {
   }
 }
 
+// ── Save / Load ───────────────────────────────────────────
+function saveData() {
+  const btn = document.querySelector('.btn-save');
+  btn.classList.add('saving');
+  btn.innerHTML = '<span class="icon">✅</span> 已儲存！';
+
+  const payload = {
+    stocks,
+    cash: parseFloat(document.getElementById('cashInput').value) || 0,
+    savedAt: new Date().toISOString()
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  showSaveTime(payload.savedAt);
+
+  setTimeout(() => {
+    btn.classList.remove('saving');
+    btn.innerHTML = '<span class="icon">💾</span> 更新資產並儲存';
+  }, 1800);
+}
+
+function showSaveTime(iso) {
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2,'0');
+  const str = `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  document.getElementById('saveStatus').textContent = '上次儲存';
+  document.getElementById('saveTime').textContent   = str;
+}
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const payload = JSON.parse(raw);
+      stocks = payload.stocks || DEFAULT_STOCKS;
+      document.getElementById('cashInput').value = payload.cash || '';
+      if (payload.savedAt) showSaveTime(payload.savedAt);
+      return;
+    }
+  } catch(e) {}
+  stocks = DEFAULT_STOCKS;
+  document.getElementById('saveStatus').textContent = '尚無儲存記錄';
+}
+
+// ── Init ─────────────────────────────────────────────────
+loadData();
 buildTable();
 update();
 </script>
